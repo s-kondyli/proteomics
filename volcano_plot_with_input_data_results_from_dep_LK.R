@@ -16,7 +16,7 @@ data$inhibitor_vs_DMSO_ratio <- as.numeric(data$inhibitor_vs_DMSO_ratio)
 
 #select columns for volcano plot, update every time
 df_volcano <- data %>%
-  select(inhibitor_vs_DMSO_ratio, inhibitor_vs_DMSO_p.adj, name)
+  dplyr::select(inhibitor_vs_DMSO_ratio, inhibitor_vs_DMSO_p.adj, name)
 
 colnames(df_volcano) <- c('x','y','Genes')
 
