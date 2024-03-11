@@ -2,7 +2,8 @@ library(msigdb)
 library(fgsea)
 library(tools)
 library(ggplot2)
-
+# This script performs GSEA analysis (CC for cellular compartment and BP for bioological processes 
+# It uses as input the output table of dep analysis package
 # Load data- adjust path each time
 data= read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/V18_plus_minus_biotin/data_results_v18_plus_minus_biotin_PD.tsv',
                    stringsAsFactors = F)
@@ -11,8 +12,8 @@ data= read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/V18_plus_minus_bioti
 msigdb.hs = getMsigdb(org = 'hs', id = 'SYM')
 msigdb.hs = appendKEGG(msigdb.hs)
 
-genesets = subsetCollection(msigdb.hs, collection = 'c5' , subcollection = 'GO:CC')
-genesets = genesets[grepl('^GOCC', names(genesets))]
+genesets = subsetCollection(msigdb.hs, collection = 'c5' , subcollection = 'GO:CC') 
+genesets = genesets[grepl('^GOCC', names(genesets))] # CC for cellular compartment and BP for biological processes
 pathways = geneIds(genesets)
 
 # rank genes based on the -log2fold ratio -> adjust each time
@@ -37,8 +38,8 @@ fgseaRes = fgseaRes[order(fgseaRes$padj),] #order on ascending order based on th
 df = data.frame(pathway = fgseaRes$pathway, padj = fgseaRes$padj, NES = fgseaRes$NES, cat = 'CC')
 
 
-# New df -> Combine the top 10 rows with the highest NES values 
-# and the top 10 rows with the lowest NES values from df -> you can adjust it
+# New df -> Combine the top x rows with the highest NES values 
+# and the top x rows with the lowest NES values from df -> you can adjust it
 
 df_plot = rbind(df[order(df$NES, decreasing = T),][1:20,], df[order(df$NES),][1:5,]) 
 
