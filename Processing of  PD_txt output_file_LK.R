@@ -1,6 +1,3 @@
-# This R script is designed for the LFQ analysis of mass spectrometry-based proteomics data from DIANN
-# The script provides a systematic and reproducible analysis pipeline for proteomics data
-# Lindeboom Lab - Cas Kranenburg feb 2024
 
 ## 1. **Environment Setup:**
 # - Clears the environment and sets the seed for reproducibility.
@@ -44,7 +41,7 @@ library(dplyr)
 # - Reads proteomics output data along with experimental design files.
 # - Merges the data and experimental design for downstream analysis.
 # - Extracts gene names from protein descriptions, filters data, and identifies and resolves duplicate gene names.
-  
+
 
 # Load data -> Import the data using the "Import Dataset" from the environment
 # Rename the raw data analysis PD output txt file to "data"
@@ -56,18 +53,8 @@ library(dplyr)
 
 ExperimentalDesign$replicate <- as.numeric(ExperimentalDesign$replicate )
 
-#### temp code because of not all raw files were run -> delete from future experiments
-
-# Find column names matching the regex pattern
-columns_to_drop <- grep("^Abundances..Normalized...F(?:[4-6]|10|11)..Sample", names(data), value = TRUE)
-
-# Drop the columns
-data <- data[, !names(data) %in% columns_to_drop] # Now df contains all columns except those matching the regex pattern
-
-#### end of temp code
-
 # Convert columns that match the regex (basically the columns that contain maxLFQ intensities) to numeric
-columns_to_convert <- grep("^Abundances..Normalized...F\\d..Sample", names(data), value = TRUE)
+columns_to_convert <- grep("^Abundances..Normalized...F\\d..*", names(data), value = TRUE)
 data[columns_to_convert] <- lapply(data[columns_to_convert], as.numeric)
 
 # Function to extract Gene Name from Description
@@ -107,75 +94,94 @@ data %>% group_by(Gene.names) %>% summarize(frequency = n()) %>%
 data_unique <- make_unique(data, "Gene.names", "Protein.IDs", delim = ";")
 
 # Generate a SummarizedExperiment object by parsing condition information from the column names
-LFQ_columns <- grep("^Abundances..Normalized...F\\d..Sample", colnames(data_unique)) # get LFQ column numbers
+LFQ_columns <- grep("^Abundances..Normalized...F\\d..*", colnames(data_unique)) # get LFQ column numbers
 data_se <- make_se(data_unique, LFQ_columns, ExperimentalDesign)
 # Generate a SummarizedExperiment object by parsing condition information from the column names
 data_se_parsed <- make_se_parse(data_unique, LFQ_columns)
-
-
-
-#Filter on missing values
-
-# Plot a barplot of the protein identification overlap between samples
-plot_frequency(data_se)
 
 # Filter for proteins that are identified in all replicates of at least one condition
 # thr=1 <- Filter for proteins that are identified in 2 out of 3 replicates of at least one condition
 # thr=0 <- Filter for proteins that are identified in all replicates of at least one condition
 data_filt <- filter_missval(data_se, thr = 0)
 
+# Normalize the data
+data_norm <- normalize_vsn(data_filt)
+# meanSdPlot to verify the fitting of the normalization
+# meanSdPlot(data_norm) # Can be skipped
+# Visualize normalization by boxplots for all samples before and after normalization
+
+
+# Impute data for missing values- Imputation strategy
+# Algorithm in fun should be one of:
+# "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "man", "min", "zero", "mixed", "nbavg"
+# data can be missing not at random (NMAR),like in our case.
+# MNAR features should ideally be imputed with a left-censor method, e.g. MinProb, QRILC etc
+data_imp <- impute(data_norm, fun = "MinProb")
+
+
+## 5. **Differential Enrichment Analysis:**
+
+# Test every sample versus control
+data_diff_all_contrasts <- test_diff(data_imp, type = "all")
+
+# Denote significant proteins based on user defined cutoffs -> adjustable cut-offs if needed
+dep <- add_rejections(data_diff_all_contrasts, alpha = 0.05, lfc = log2(1.5))
+
+
+### 7. **Results Table:**
+
+# Generate a results table
+data_results <- get_results(dep)
+
+#Filter out contaminants e.g. keratins etc
+
+#Create a list of contaminants form the common_contaminants txt file
+# Read the file line by line
+lines <- readLines("R:/Group Vermeulen/Lila/Mass_spec_results/common_contaminants.txt")
+
+# Initialize an empty list to store the results
+sequences <- list()
+
+# Loop through each line
+for (line in lines) {
+  # Check if the line starts with ">"
+  if (startsWith(line, ">")) {
+    # Extract the part after ">" and before the next space
+    sequence_id <- gsub("^>\\s*([^ ]+).*", "\\1", line)
+    # Append the extracted part to the list
+    sequences <- c(sequences, list(sequence_id))
+  }
+}
+# Remove rows based on sequences list
+data_results <- data_results[!(data_results$ID %in% sequences), ]
+
+# Number of significant proteins
+data_results %>% filter(significant) %>% nrow()
+
+colnames(data_results)
+
+# Save the combined dataframe as a tsv txt file in the specified directory ->always change the file name 
+data_folder <- "R:/Group Vermeulen/Lila/Mass_spec_results/V23_LK"
+
+write.table(data_results, file = paste0(data_folder, "/data_results_v23_PD.tsv"), sep = "\t", row.names = FALSE)
+
+### Visualization -> QC plots (e.g. PCA) and basic volcano plot
+
+plot_frequency(data_se)
 # Plot a barplot of the number of identified proteins per samples
 plot_numbers(data_filt)
 
 # Plot a barplot of the protein identification overlap between samples
 plot_coverage(data_filt)
 
-
-## 4. **Data Normalization and Imputation:**
-# - Normalizes the data for downstream analysis..
-# - Applies imputation techniques to handle missing values in the data
-
-# Normalize the data
-data_norm <- normalize_vsn(data_filt)
-# meanSdPlot to verify the fitting of the normalization
-# meanSdPlot(data_norm) # Can be skipped
 # Visualize normalization by boxplots for all samples before and after normalization
 plot_normalization(data_filt, data_norm)
-
-
 
 # Plot a heatmap of proteins with missing values
 plot_missval(data_filt)
 
 # Plot intensity distributions and cumulative fraction of proteins with and without missing values
 plot_detect(data_filt)
-
-#Imputation with algorithm
-
-# Impute data for missing values- Imputation strategy
-# Algorithm in fun should be one of:
-# "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "man", "min", "zero", "mixed", "nbavg"
-# data can be missing at random (MAR), for example if proteins are quantified in some replicates but not in others
-# MAR data should be imputed with methods such as
-# k-nearest neighbor (“knn”) or maximum likelihood (“MLE”) functions
-data_imp <- impute(data_norm, fun = "knn")
-
-# Plot intensity distributions before and after imputation
-plot_imputation(data_norm, data_imp)
-
-
-## 5. **Differential Enrichment Analysis:**
-# - Performs differential enrichment analysis based on linear models and empirical Bayes statistics.
-# - Identifies significant proteins based on user-defined criteria.
-
-# Test every sample versus control
-data_diff_all_contrasts <- test_diff(data_imp, type = "all")
-
-# Denote significant proteins based on user defined cutoffs
-dep <- add_rejections(data_diff_all_contrasts, alpha = 0.05, lfc = log2(1.5))
-
-## 6. **Visualization of Results:**
-# - Generates various plots, including PCA plots, correlation matrices, heatmaps, and volcano plots, to visualize the results of the differential enrichment analysis.
 
 # Plot the first and second principal components
 plot_pca(dep, x = 1, y = 2, n = 500, point_size = 4)
@@ -195,14 +201,14 @@ plot_heatmap(dep, type = "contrast", kmeans = TRUE,
 
 # Plot a volcano plot for the contrast -> change it each time according to your data
 # in the plot_volcano function if you set adjusted = T it uses the adjusted p-value 
-plot_volcano(dep, contrast = "plus.biotin.lysed.with.NP.40_vs_minus.biotin.lysed.with.NP.40", label_size = 2, add_names = TRUE, adjusted = T)  +
+plot_volcano(dep, contrast = "X24.hours.dox_vs_untreated.", label_size = 2, add_names = TRUE, adjusted = T)  +
   labs(
-  title = "Differential Enrichment plot of LS174T w4",
-  subtitle = "Method: Astral DIA (30SPD) Ionoptics",
-  x = (bquote(Log[2] ("fold-change"))),
-  y = (bquote(-Log[10] ("adjusted p-value"))),
-  caption = "LS174Tw4 cells +/- biotin lysed with NP-40 followed by strep pull-down"
-) +
+    title = "Differential Enrichment plot of LS174T w4",
+    subtitle = "Method: Astral DIA (30SPD) Ionoptics",
+    x = (bquote(Log[2] ("fold-change"))),
+    y = (bquote(-Log[10] ("adjusted p-value"))),
+    caption = "LS174Tw4 cells +/- biotin lysed with NP-40 followed by strep pull-down"
+  ) +
   #theme_classic() +
   theme (
     plot.title = element_text(size = 11),  # Adjust title size here
@@ -212,34 +218,13 @@ plot_volcano(dep, contrast = "plus.biotin.lysed.with.NP.40_vs_minus.biotin.lysed
   geom_vline(xintercept = c(-1,1), linetype = "dashed") +
   geom_vline(xintercept = 0) +
   geom_hline(yintercept = -log10(0.05), linetype = "dashed")
-  
 
-  
+
+
 # Plot a barplot for a single protein -> change the protein name
 plot_single(dep, proteins = c("PTK7", "CD47"))
 
 # Plot a barplot for the single protein with the data centered
-plot_single(dep, proteins = "PTK7", type = "centered")
-
-# Plot a frequency plot of significant proteins for the different conditions -> figure out why it doesn't work
-plot_cond(dep)
-
-## 7. **Results Table:**
-# - Produces a results table summarizing the outcomes of the differential enrichment analysis.
-# - Calculates the number of significant proteins.
-
-# Generate a results table
-data_results <- get_results(dep)
-
-# Number of significant proteins
-data_results %>% filter(significant) %>% nrow()
-
-colnames(data_results)
-
-# Save the combined dataframe as a tsv txt file in the specified directory ->always change the file name 
-data_folder <- "R:/Group Vermeulen/Lila/Mass_spec_results/V19_plus_minus_biotin"
-
-write.table(data_results, file = paste0(data_folder, "/data_results_v19_plus_minus_biotin_PD.tsv"), sep = "\t", row.names = FALSE)
-
+plot_single(dep, proteins = "STK11", type = "centered")
 
 
