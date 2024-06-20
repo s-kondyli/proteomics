@@ -2,7 +2,8 @@
 # Load required packages
 library(dplyr)
 library(VennDiagram)
-
+# creates venn diagramm from the output of dep package using the columns that contain the logical vectors for whether a protein is significant or not in a 
+# certain condition
 # Choose the columns of interest ---> change each time
 columns_of_interest <- c("X1k.stimulated_vs_X1k.untreated_significant", "X2k.stimulated_vs_X2k.untreated_significant", 
                          "X5k.stimulated_vs_X5k.untreated_significant")
