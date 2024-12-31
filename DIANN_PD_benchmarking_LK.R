@@ -15,11 +15,11 @@ library(tidyr)
 ### Load data
 
 #read the dataframes from the saved folder -> adjust each time
-diann = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/V19_plus_minus_biotin/data_results_v19_plus_minus_biotin_DIANN.tsv', stringsAsFactors = F)
-pd = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/V19_plus_minus_biotin/data_results_v19_plus_minus_biotin_PD.tsv', stringsAsFactors = F)
+diann = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/V23_LK/data_results_V23_DIANN_.tsv', stringsAsFactors = F)
+pd = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/V23_LK/data_results_v23_plus_minus_biotin_PD.tsv', stringsAsFactors = F)
 
 
-diann$plus.biotin.lysed.with.NP.40_vs_minus.biotin.lysed.with.NP.40_ratio <- as.numeric(diann$plus.biotin.lysed.with.NP.40_vs_minus.biotin.lysed.with.NP.40_ratio)
+diann$plus.biotin_vs_minus.biotin_ratio <- as.numeric(diann$plus.biotin_vs_minus.biotin_ratio)
 
 # Convert df$PD to numeric
 
@@ -61,9 +61,9 @@ pd_significant_filter = pd_significant_filter[order(pd_significant_filter$name),
 
 
 #This line creates new data frames df and df2 containing three columns: gene, DIANN, and PD for the correlation plots
-df = data.frame(gene = pd_filter$name, DIANN = diann_filter$plus.biotin.lysed.with.NP.40_vs_minus.biotin.lysed.with.NP.40_ratio, PD = pd_filter$plus.biotin.lysed.with.NP.40_vs_minus.biotin.lysed.with.NP.40_ratio,
+df = data.frame(gene = pd_filter$name, DIANN = diann_filter$plus.biotin_vs_minus.biotin_ratio, PD = pd_filter$plus.biotin.lysed.with.NP.40_vs_minus.biotin.lysed.with.NP.40_ratio,
               PD_significant =  pd_filter$significant, DIANN_significant = diann_filter$significant)
-df2 = data.frame(gene = pd_significant_filter$name, DIANN = diann_significant_filter$plus.biotin.lysed.with.NP.40_vs_minus.biotin.lysed.with.NP.40_ratio, PD = pd_significant_filter$plus.biotin.lysed.with.NP.40_vs_minus.biotin.lysed.with.NP.40_ratio)
+df2 = data.frame(gene = pd_significant_filter$name, DIANN = diann_significant_filter$plus.biotin_vs_minus.biotin_ratio, PD = pd_significant_filter$plus.biotin.lysed.with.NP.40_vs_minus.biotin.lysed.with.NP.40_ratio)
 
 
 # Create a new column that will identify if a gene is significant in PD or DIANN or both or none so you can plot it in a scatter plot

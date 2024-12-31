@@ -43,7 +43,7 @@ for (col in matching_columns) {
   
   # Apply p-value adjustment using limma's p.adjust function
   # You can choose other methods like "holm","hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"
-  adjusted_p_values <- p.adjust(p_values, method = "bonferroni")  
+  adjusted_p_values <- p.adjust(p_values, method = "BH")  
   
   # Create a new column with adjusted p-values but keeping the rest of the name same and changing only the p.val for p.adj
   new_col_name <- sub("p.val", "p.adj", col)  # Replace "pval" with your actual column name pattern
@@ -53,6 +53,6 @@ for (col in matching_columns) {
 ### Save the data to be plotted 
 
 # Save the combined dataframe as a tsv txt file in the specified directory ->always change the file name 
-data_folder <- "R:/Group Vermeulen/Lila/Mass_spec_results/V18_plus_minus_biotin"
+data_folder <- "R:/Group Vermeulen/Lila/Mass_spec_results/V63_Paulien/re-analysis_V63"
 
-write.table(data_results, file = paste0(data_folder, "/GSEAdata_v18_plus_minus_biotin_DIANN.tsv"), sep = "\t", row.names = FALSE)
+write.table(data_results, file = paste0(data_folder, "/data_BH_V63_DIANN_1.9.2.tsv"), sep = "\t", row.names = FALSE, quote= F)

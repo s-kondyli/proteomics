@@ -4,12 +4,11 @@
 
 
 library(reshape2)
-library(diann)
 library(dplyr)
 library(diann)
 
-pg = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/PBMCs_all/report.pg_matrix.tsv', stringsAsFactors = F, sep = '\t') # = pg.matrix
-rep = read.delim("R:/Group Vermeulen/Lila/Mass_spec_results/PBMCs_all/report.tsv", stringsAsFactors = F, sep = '\t') # = report
+pg = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/LK_V118_HAND1/report.pg_matrix.tsv', stringsAsFactors = F, sep = '\t') # = pg.matrix
+rep = read.delim("R:/Group Vermeulen/Lila/Mass_spec_results/LK_V118_HAND1/report.tsv", stringsAsFactors = F, sep = '\t') # = report
 contaminants = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/contaminants.txt', sep = '\t')$x #common contaminants file always in the same location
 #alternative for opening the report file fast
 #rep =  diann_load("R:/Group Vermeulen/Lila/Mass_spec_results/PBMCs_all/report.tsv")
@@ -72,9 +71,9 @@ pg = prepare_pg(pg, rep, contaminants, 'Genes', id_header = 'Stripped.Sequence',
 
 #option to save pg2 matrix as well
 # Save the combined dataframe as a tsv file in the specified directory ->always change the file name 
-data_folder <- "R:/Group Vermeulen/Lila/Mass_spec_results/PBMCs_all"
+data_folder <- "R:/Group Vermeulen/Lila/Mass_spec_results/LK_V118_HAND1"
 
-write.table(pg, file = paste0(data_folder, "/report.pg_peptide_info_all_PBMCs_DIANN_1.9.2.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(pg, file = paste0(data_folder, "/report.pg_peptide_info_V118_DIANN_1.9.2.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
 
 #filter the dataframe to keep proteins that have at least 2 unique + razor peptides 
 # adjust if you want to be more stringent
@@ -88,9 +87,9 @@ data <- data %>%
 #drop the columns that you don't need anymore (so you can feed it to dep package)
 
 data <- data %>%
-  select(1:28) #change the number each time by calculating: 4 standards columns + number of samples you have 
+  select(1:16) #change the number each time by calculating: 4 standards columns + number of samples you have 
 
 # Save the combined dataframe as a tsv file in the specified directory ->always change the file name 
 data_folder <- "R:/Group Vermeulen/Lila/Mass_spec_results/V_LK_One_tip"
 
-write.table(data, file = paste0(data_folder, "/report.pg_peptides_filtered_all_PBMCs_DIANN_1.9.2.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(data, file = paste0(data_folder, "/report.pg_peptides_filtered_V118_DIANN_1.9.2.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)

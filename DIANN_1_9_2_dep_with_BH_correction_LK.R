@@ -28,14 +28,16 @@ library(R.utils)
 # Requirement2: raw data analysis output in tsv or txt format 
 # When you import the data from the pg.matrix the decimal should be period which is the default handling of DIANN output and dep package
 # Read all data 
-
+# BH correction works for 1 contrast
 ExperimentalDesign$replicate <- as.numeric(ExperimentalDesign$replicate)
 
-data = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/V93_PBMCs/report.pg_peptides_filtered_V93_DIANN_1.9.2 - Copy.tsv', stringsAsFactors = F, sep = '\t') # = pg.matrix
+data = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/LK_V118_HAND1/results_ss_probes/report.pg_peptides_filtered_V118_ssDNA_probes_1.9.2 - Copy.tsv', stringsAsFactors = F, sep = '\t') # = pg.matrix
 
+#If you don't want to impute -> excludes all NaN
+#data <- na.omit(data)
 
 # Convert columns that match the regex (basically the columns that contain maxLFQ intensities) to numeric
-columns_to_convert <- grep("wt|T|B", names(data), value = TRUE)
+columns_to_convert <- grep("JD|wt_|neg", names(data), value = TRUE)
 data[columns_to_convert] <- lapply(data[columns_to_convert], as.numeric)
 
 
@@ -47,7 +49,7 @@ data <- data %>%
 data_unique <- make_unique(data, "Genes", "Protein.Names", delim = ";")
 
 # Generate a SummarizedExperiment object by parsing condition information from the column names
-LFQ_columns <- grep("wt|T|B", colnames(data_unique)) # get LFQ column numbers
+LFQ_columns <- grep("JD|wt_|neg", colnames(data_unique)) # get LFQ column numbers
 data_se <- make_se(data_unique, LFQ_columns, ExperimentalDesign)
 # Generate a SummarizedExperiment object by parsing condition information from the column names
 data_se_parsed <- make_se_parse(data_unique, LFQ_columns)
@@ -74,14 +76,15 @@ data_imp <- impute(data_norm, fun = "MinProb")
 # Test every sample versus control
 data_diff_all_contrasts <- test_diff(data_imp, type = "all")
 
+
 ###Manual tests
 
-#data_diff_all_contrasts <- test_diff(data_imp, type = "manual", test=c("tip_T_cells_vs_tip_Hela_cells"))
+#data_diff_all_contrasts <- test_diff(data_imp, type = "manual", test=c("JD39_vs_negative_ctrl"))
 
 
 # Add BH correction to the results -> WARNING: works for single tests only!!!!
 # Extract p-values from the test_diff results -> check which column to use using the function "head(rowData(data_diff_all_contrasts))"
-pvals <- rowData(data_diff_all_contrasts)[, 13]
+pvals <- rowData(data_diff_all_contrasts)[, 11]
 
 
 # Apply Benjamini-Hochberg correction to the pvals
@@ -89,7 +92,7 @@ p.adj <- p.adjust(pvals, method = "BH")
 
 
 # Add the adjusted p-values to the results without changing the name of the column 
-rowData(data_diff_all_contrasts)[, 12] <-  p.adj #always a column before the one you used to extract the data
+rowData(data_diff_all_contrasts)[, 10] <-  p.adj #always a column before the one you used to extract the data
 
 
 
@@ -134,9 +137,9 @@ data_results %>% filter(significant) %>% nrow()
 colnames(data_results)
 
 # Save the combined dataframe as a tsv  file in the specified directory ->always change the file name 
-data_folder <- "R:/Group Vermeulen/Lila/Mass_spec_results/V85_PBMCs"
+data_folder <- "R:/Group Vermeulen/Lila/Mass_spec_results/LK_V118_HAND1/results_ss_probes"
 
-write.table(data_results, file = paste0(data_folder, "/data_results_3rep_BH_V85_DIANN_1.9.2.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(data_results, file = paste0(data_folder, "/data_results_BH_V118_original_no_imp_DIANN_1.9.2.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
 
 
 
@@ -176,7 +179,7 @@ plot_heatmap(dep, type = "contrast", kmeans = TRUE,
              k = 6, col_limit = 10, show_row_names = FALSE)
 
 # Plot a volcano plot for the contrast -> change it each time according to your data
-plot_volcano(dep, contrast = "HAND1.single.motif._vs_HAND1.scramble.single.", label_size = 2, add_names = TRUE, adjusted = T) +
+plot_volcano(dep, contrast = "JD39_vs_negative_ctrl", label_size = 2, add_names = TRUE, adjusted = T) +
   labs(
     title = "Differential Enrichment plot",
     subtitle = "Method: Astral DIA (30SPD) Ionoptics",
@@ -198,7 +201,7 @@ plot_volcano(dep, contrast = "HAND1.single.motif._vs_HAND1.scramble.single.", la
 
 
 # Plot a barplot for a single protein -> change the protein name
-plot_single(dep, proteins = c("PTK7", "CD47"))
+plot_single(dep, proteins = c("SMAD4", "HAND1"))
 
 # Plot a barplot for the single protein with the data centered
 plot_single(dep, proteins = "CD62L", type = "centered")

@@ -9,7 +9,7 @@ library(ggcorrplot)
 # Input: ExperimentalDesign & pg.matrix 
 
 #Import data
-proteomics_data = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/PBMCs_all/report.pg_matrix - Copy.tsv', stringsAsFactors = F, sep = '\t') # = pg.matrix
+proteomics_data = read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/PBMCs_all/hela/report.pg_matrix - Copy.tsv', stringsAsFactors = F, sep = '\t') # = pg.matrix
 
 # Convert columns that match the regex (basically the columns that contain maxLFQ intensities) to numeric
 columns_to_convert <- grep("wt|V|B", names(proteomics_data), value = TRUE)
@@ -82,7 +82,8 @@ create_heatmap <- function(condition, data) {
     type = "full",
     lab = TRUE,
     title = paste("Correlation Heatmap for Condition:", condition),
-    colors = c("red", "white", "blue")
+    colors = c("#ef8a62", "#f7f7f7", "#67a9cf"),
+    digits = 3
   )
   
   return(heatmap)

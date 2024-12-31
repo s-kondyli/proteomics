@@ -2,22 +2,22 @@ library(msigdb)
 library(fgsea)
 library(tools)
 library(ggplot2)
-# This script performs GSEA analysis (CC for cellular compartment and BP for bioological processes 
-# It uses as input the output table of dep analysis package
+
 # Load data- adjust path each time
-data= read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/V18_plus_minus_biotin/data_results_v18_plus_minus_biotin_PD.tsv',
+data= read.delim('R:/Group Vermeulen/Lila/Mass_spec_results/PBMCs_all/all_filtered_2_unique_peptides/data_PBMCs_all_BH_correction_DIANN_1.9.2.tsv',
                    stringsAsFactors = F)
 
 
 msigdb.hs = getMsigdb(org = 'hs', id = 'SYM')
 msigdb.hs = appendKEGG(msigdb.hs)
 
-genesets = subsetCollection(msigdb.hs, collection = 'c5' , subcollection = 'GO:CC') 
-genesets = genesets[grepl('^GOCC', names(genesets))] # CC for cellular compartment and BP for biological processes
+
+genesets = subsetCollection(msigdb.hs, collection = 'c5' , subcollection = 'GO:BP') 
+genesets = genesets[grepl('^GOBP', names(genesets))] ## CC for cellular compartment and BP for biological processes, MF for molecular functions
 pathways = geneIds(genesets)
 
 # rank genes based on the -log2fold ratio -> adjust each time
-ranked_genes = data$plus.biotin_vs_minus.biotin_ratio
+ranked_genes = data$V85_T_vs_V85_B_ratio
 names(ranked_genes) = data$name
 ranked_genes = sort(ranked_genes, decreasing = T)
 
@@ -35,11 +35,11 @@ fgseaRes = fgseaRes[order(fgseaRes$padj),] #order on ascending order based on th
 # Create dataframe with enriched pathways, adjusted p-values and NES:Normalized Enrichment Scores
 
 
-df = data.frame(pathway = fgseaRes$pathway, padj = fgseaRes$padj, NES = fgseaRes$NES, cat = 'CC')
+df = data.frame(pathway = fgseaRes$pathway, padj = fgseaRes$padj, NES = fgseaRes$NES, cat = 'BP') #change the cat to match the gsea you do e.g. BP, CC or MF
 
 
-# New df -> Combine the top x rows with the highest NES values 
-# and the top x rows with the lowest NES values from df -> you can adjust it
+# New df -> Combine the top 10 rows with the highest NES values 
+# and the top 10 rows with the lowest NES values from df -> you can adjust it
 
 df_plot = rbind(df[order(df$NES, decreasing = T),][1:20,], df[order(df$NES),][1:5,]) 
 
@@ -65,9 +65,33 @@ df_plot$pathway = sapply(df_plot$pathway, function(x){
   theme_minimal() +
   theme(axis.title = element_blank()) +
 labs(
-  title = "GSEA analysis for surface biotinylation",
-  subtitle = "Colo 320 cells +/- biotin lysed with the commercial lysis buffer",
-  caption = "Astral DIA (30SPD) Ionoptics analyzed with PD", )
+  title = "GSEA analysis",
+  subtitle = "Colo320 SMAD4 KD clone 22 with dox inducible HAND1",
+  caption = "Astral DIA (30SPD) Ionoptics analyzed with DIAN 1.8.1", )
 
-
+  ###### Venn diagram to see overlap of genes between different pathways ONLY FOR SIGNIFICANT PATHWAYS
+  
+  # Drop the rows that have a padj >= 0.05, so only keep significant ones
+  
+  fgseaRes_significant_only <- subset(fgseaRes, padj < 0.05)
+  
+  # Find pathways of interest -> adjust each time
+  mitochondrial_matching_pathways <- fgseaRes_significant_only$pathway[grep("^GOCC_MITOCHONDRIAL_.", fgseaRes_significant_only$pathway)]
+  cell_surface_matching_pathways <- fgseaRes_significant_only$pathway[grep("^GOCC.*(?:PLASMA|SURFACE)", fgseaRes_significant_only$pathway)]
+  ribosomal_matching_pathways <- fgseaRes_significant_only$pathway[grep("^GOCC.*(?:RIBOSO)", fgseaRes_significant_only$pathway)]
+  
+  # Extract genes associated with matching pathways
+  mitochondrial_matching_genes <- unlist(fgseaRes_significant_only$leadingEdge[match(mitochondrial_matching_pathways, fgseaRes_significant_only$pathway)])
+  cell_surface_matching_genes <- unlist(fgseaRes_significant_only$leadingEdge[match(cell_surface_matching_pathways, fgseaRes_significant_only$pathway)])
+  ribosomal_matching_genes <- unlist(fgseaRes_significant_only$leadingEdge[match(ribosomal_matching_pathways, fgseaRes_significant_only$pathway)])
+  
+  # plots the venn diagram -> adjust the sets each time
+  venn.plot <- venn.diagram(
+    x = list(set1 = ribosomal_matching_genes, set2 = cell_surface_matching_genes),
+    category.names = c("ribosomal", "mitochondrial"),
+    filename = NULL
+  )
+  grid.draw(venn.plot)
+  
+  
 
